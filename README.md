@@ -11,14 +11,13 @@ The relevant .pkl and .ann files are in `/results`.
 Because Annoy doesn't support pickling, the index is saved to a separate .ann file. To load it, run:
 
 ```
-from annoy import AnnoyIndex
-import pickle
+# Load the saved model and function
+with open('results/collaborative_search_model_with_parallel.pkl', 'rb') as f: # or collaborative_search_model with_joblib.pkl
+    model_components = dill.load(f)
 
-# Load the transformer and y_train
-with open('collaborative_search_model.pkl', 'rb') as f:
-    transformer, y_train = pickle.load(f)
-
-# Load the Annoy index from its file
-annoy_index = AnnoyIndex(X.shape[1], 'angular')  # Replace `X.shape[1]` with the correct feature dimension
-annoy_index.load('result/annoy_index.ann')
+# Access components
+annoy_index = model_components['annoy_index']
+transformer = model_components['transformer']
+y_train = model_components['y_train']
+predict_nba_parallel = model_components['predict_nba_parallel']  # Loaded function (or predict_nba_joblib depending on what you want)
 ```
