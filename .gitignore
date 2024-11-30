@@ -3,3 +3,4 @@
 *.ann
 **/results/*.ann
 Test.ipynb
+**/results/collaborative_search_model.pkl
