@@ -1,6 +1,9 @@
 *.csv
+*.csv#
 *.parquet
 *.ann
 **/results/*.ann
 Test.ipynb
 **/results/collaborative_search_model.pkl
+**/results/collaborative_search_dot_model.pkl
+**/results/collaborative_search_dot_product_model.pkl
