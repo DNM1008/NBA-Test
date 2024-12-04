@@ -17,7 +17,7 @@ def load_saved_model():
 def load_annoy_index():
     from annoy import AnnoyIndex
 
-    f = 40  # Dimensionality, replace with the actual dimension of your index
+    f = 446  # Dimensionality, replace with the actual dimension of your index
     annoy_index = AnnoyIndex(f, "angular")
     annoy_index.load("annoy_index.ann")
     return annoy_index
