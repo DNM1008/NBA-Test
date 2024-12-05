@@ -1,43 +1,51 @@
-import dill
+from annoy import AnnoyIndex
 import numpy as np
 import pandas as pd
 import streamlit as st
+import pickle
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
 
 
-# Load the saved objects
-@st.cache_resource
-def load_saved_model():
-    with open("collaborative_search_model_with_parallel.pkl", "rb") as f:
-        saved_objects = dill.load(f)
-    return saved_objects
+
 
 
 # Load the Annoy index (if required for prediction logic)
-@st.cache_resource
-def load_annoy_index():
-    from annoy import AnnoyIndex
 
-    f = 446  # Dimensionality, replace with the actual dimension of your index
-    annoy_index = AnnoyIndex(f, "angular")
-    annoy_index.load("annoy_index.ann")
-    return annoy_index
+# def load_annoy_index():
+#     from annoy import AnnoyIndex
 
-
-# Age binning function
-def labelling(df, col, bin_edges, labels):
-    df["Age_group"] = pd.cut(
-        df[col], bins=bin_edges, labels=labels, include_lowest=True, right=False
-    )
-    return df
+#     f = 446  # Dimensionality, replace with the actual dimension of your index
+#     annoy_index = AnnoyIndex(f, "angular")
+#     annoy_index.load("annoy_index.ann")
+#     return annoy_index
 
 
-# Initialize
-saved_objects = load_saved_model()
-transformer = saved_objects["transformer"]
-predict_function = saved_objects["predict_nba_parallel"]
+# # Age binning function
+# def labelling(df, col, bin_edges, labels):
+#     df["Age_group"] = pd.cut(
+#         df[col], bins=bin_edges, labels=labels, include_lowest=True, right=False
+#     )
+
+# Example: Use the loaded function
+# Assuming predict_nba_parallel requires inputs
+index = AnnoyIndex(446, 'angular')
+index.load("annoy_index.ann")
+dictionary_path = 'bin_edges_dict.pkl'
+
+with open (dictionary_path, 'rb') as file:
+    bin_edges_dict = pickle.load(file)
+print(type(bin_edges_dict)) 
+
+
+# # Initialize
+# saved_objects = joblib.load('D://Documents/VCB/NBA/Real world use/results/collaborative_search_model_with_parallel.joblib')
+# transformer = saved_objects["transformer"]
+# y_train = saved_objects['y_train']
+# predict_function = saved_objects["predict_nba_parallel"]
 
 # Define the input fields
-st.title("Loan Recommendation App")
+st.title("Loan BANCAS App")
 st.markdown("Enter the values for the required variables to get a prediction.")
 
 # Input all variables dynamically
@@ -119,16 +127,92 @@ if st.button("Predict"):
     ]
 
     # Apply labelling function
-    input_df = labelling(input_df, "Age_y", age_bin_edges, age_labels)
+    input_df['Age_group'] = pd.cut(input_df['Age_y'], bins=age_bin_edges, labels=age_labels, right=False)
+
+    
+    def apply_labelling_with_dict(df, bin_edges_dict):
+        """
+        Applies binning to a DataFrame using precomputed bin edges.
+
+        Parameters:
+        - df: DataFrame to label.
+        - bin_edges_dict: Dictionary containing precomputed bin edges.
+
+        Returns:
+        - df: Updated DataFrame with consistent binned columns.
+        """
+        for col, bin_edges in bin_edges_dict.items():
+            if col in df.columns:
+                # Apply consistent binning
+                df[col] = pd.cut(df[col], bins=bin_edges, labels=False, right=False)
+            else:
+                print(f"Warning: Column '{col}' is not present in the dataset.")
+        return df
+
+
+
+    def predict_nba_parallel(df, target_column, annoy_index, transformer, y_train, n_neighbors=20, n_jobs=4):
+    # Preprocess the data and separate features
+        X, y, _ = preprocess_data(df, target_column, transformer)
+        
+        # Function to process a single observation
+        def process_vector(test_vector):
+            nearest_neighbors = annoy_index.get_nns_by_vector(test_vector, n_neighbors)  # Find neighbors
+            similar_train_data = y_train.iloc[nearest_neighbors]  # Use y_train directly
+            return similar_train_data.mean()  # Average for prediction
+        
+        # Parallelize using ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=n_jobs) as executor:
+            y_pred = list(executor.map(process_vector, X))
+        
+        return np.array(y_pred)
+    def handle_missing_values(df):
+        df = df.astype(str)
+        df = df.fillna("None")
+        return df
+    # Step 2: Preprocess - Encoding categorical variables
+    def preprocess_data(df, target_column, transformer=None):
+        # Separate features (X) and target (y)
+        X = df.drop(columns=[target_column])
+        y = df[target_column]
+        
+        # Reset indices for alignment with Annoy
+        X = X.reset_index(drop=True)
+        y = y.reset_index(drop=True)
+        
+        # Handle missing values and ensure consistent data types
+        X = handle_missing_values(X)
+
+        if transformer is None:
+            transformer = ColumnTransformer(
+                transformers=[
+                    ('cat', OneHotEncoder(sparse_output=False, handle_unknown='ignore'), X.columns.tolist())
+                ],
+                remainder='passthrough'
+            )
+            transformer.fit(X)
+        
+        # Transform features
+        X_transformed = transformer.transform(X)
+        return X_transformed.astype(np.float32), y.astype(float), transformer
+
+    cols_to_label = ['AVG_AMT_3M', 'AVG_CBALQ_3m', 'AVG_CBALQ_6m', 'AVG_CBALQ_TGCCKH',
+       'AVG_GR_CBALQ', 'AVG_GR_THGCO', 'AVG_GR_THGNO', 'AVG_SL_SP_BOSUNG',
+        'CBALQ_3m', 'CBALQ_6m', 'CNT_TGCCKH', 'MEDIAN_GR_CBALQ',
+       'MEDIAN_GR_SUM_AMT', 'MEDIAN_GR_THGCO', 'MEDIAN_GR_THGNO',
+       'NO_TREN_CO_3m', 'NO_TREN_CO_6m', 'SUM_CBALQ_LH', 'Snapshot', 'Sum_PPC',
+       'THGCO_3m', 'THGCO_6m', 'THGNO_3m', 'THGNO_6m', 'TONGTHUNHAPHANGTHANG']
+
+    input_df =apply_labelling_with_dict(input_df, bin_edges_dict)
 
     # Apply transformations
-    try:
-        X_transformed = transformer.transform(input_df)
-        X_transformed = X_transformed.astype(np.float32)  # Ensure proper dtype
+    # try:
+    #     X_transformed = transformer.transform(input_df)
+    #     X_transformed = X_transformed.astype(np.float32)  # Ensure proper dtype
 
-        # Run prediction
-        result = predict_function(X_transformed)
-        st.success(f"Prediction Result: {result}")
-        st.write(f"Age Group: {input_df['Age_group'].iloc[0]}")
-    except Exception as e:
-        st.error(f"Error during prediction: {e}")
+    #     # Run prediction
+    result = predict_nba_parallel(input_df)
+    st.success(f"Prediction Result: {result}")
+    st.write(f"Age Group: {input_df['Age_group'].iloc[0]}")
+        
+
