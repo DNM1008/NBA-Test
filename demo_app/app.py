@@ -6,6 +6,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from concurrent.futures import ThreadPoolExecutor
 import pickle
+import xgboost as xgb
 
 # App Title
 st.title("BANCAS Marketing Suggestion")
@@ -22,10 +23,23 @@ annoy_index.load(index_file)
 # Load the cleaned dataframe
 train_df = pd.read_csv('cleaned_train.csv')
 y_train = train_df['IS_BANCAS']
-
+X_template = pd.read_csv('template.csv')
 # Load the transformer
 with open("transformer.pkl", "rb") as file:
     loaded_transformer = pickle.load(file)
+# Load the xgb model
+with open('xgb_model.pkl', 'rb') as file:
+    xgb_model = pickle.load(file)
+# Function to ensure new data has all columns from old data
+def ensure_all_columns(old_df, new_df):
+    # Add missing columns with default value 0
+    for col in old_df.columns:
+        if col not in new_df.columns:
+            new_df[col] = 0
+    
+    # Reorder columns to match the old dataset
+    new_df = new_df[old_df.columns]
+    return new_df
 
 # Number of neighbors
 num_neighbors = 20
@@ -66,11 +80,31 @@ demographic_options = {
 
 casa_options = {
     "BHNT_after21": ["No Info", "No", "Yes"],
-    "BHSK_after21": ["No Info", "Yes", "No"],
+    "BHSK_after21": ["No Info", "No", "Yes"],
     "BHSK_remain": ["No Info", "No", "Yes"],
     "BHNT_remain": ["No Info", "No", "Yes"],
-    "TONGTHUNHAPHANGTHANG": ["None applicable", "22tr toi duoi 35 tr", "Duoi 8tr8", "Tren 100tr", "11tr5 toi duoi 15tr", "35tr toi duoi 50 tr", "15tr toi duoi 22tr", "8tr8 toi duoi 11tr5", "50 tr toi duoi 100 tr"],
-    "So_du": ["80 toi 120 trieu", "Duoi 15 trieu", "None applicable", "15 toi duoi 43 trieu", "Tren 820 trieu", "120 toi 200 trieu", "360 toi 820 trieu", "43 toi duoi 80 trieu", "200 toi duoi 360 trieu"],
+    "TONGTHUNHAPHANGTHANG": [
+        "Duoi 8tr8", 
+        "8tr8 toi duoi 11tr5", 
+        "11tr5 toi duoi 15tr", 
+        "15tr toi duoi 22tr", 
+        "22tr toi duoi 35 tr", 
+        "35tr toi duoi 50 tr", 
+        "50 tr toi duoi 100 tr"
+        "Tren 100tr",
+        "None applicable", 
+        ],
+    "So_du": [
+        "Duoi 15 trieu", 
+        "15 toi duoi 43 trieu", 
+        "43 toi duoi 80 trieu", 
+        "80 toi 120 trieu", 
+        "120 toi 200 trieu", 
+        "200 toi duoi 360 trieu"
+        "360 toi 820 trieu", 
+        "Tren 820 trieu", 
+        "None applicable", 
+        ],
 }
 
 # Create empty dictionary to store user inputs
@@ -120,13 +154,25 @@ def predict_nba_parallel(df, target_column, annoy_index, transformer, y_train, n
 
     return np.array(y_pred)
 
+
+with open("transformer.pkl", "rb") as file:
+    transformer = pickle.load(file)
 # Prediction button
 if st.button("Predict BANCAS"):
+    # Convert inputs to a DataFrame
     user_df = pd.DataFrame([user_inputs])
     user_df['IS_BANCAS'] = 0
+    # vector = user_df.iloc[0].tolist()
     target_column = 'IS_BANCAS'
-    y_pred_col_train = predict_nba_parallel(user_df, target_column, annoy_index, loaded_transformer, y_train)
+    y_pred_col_train = predict_nba_parallel(user_df, target_column, annoy_index, transformer, y_train)
     y_pred_col_train_round = y_pred_col_train.round()
-
+    # neighbor_indices = annoy_index.get_nns_by_vector(vector, num_neighbors)
+    # similar_observations = train_df.iloc[neighbor_indices]
+    
     st.write("Customer's expected BANCAS:")
     st.dataframe(y_pred_col_train)
+
+    # Save the DataFrame to a CSV file (optional)
+    # user_df.to_csv("user_inputs.csv", index=False)
+    # st.success("DataFrame saved as user_inputs.csv!")
+    
