@@ -1,15 +1,38 @@
-import joblib
+import pickle
+import pandas as pd
+import numpy as np
 
-# Load the saved dictionary
-data = joblib.load('D://Documents/VCB/NBA/Real world use/results/collaborative_search_model_with_parallel.joblib')
+with open('xgb_model.pkl', 'rb') as f:
+    model = pickle.load(f)
+    
+template = pd.read_csv('template.csv')
+template = template.drop(columns = ['Unnamed: 0', 'Unnamed: 1'])
 
-# Access individual components
-transformer = data['transformer']
-y_train = data['y_train']
-predict_nba_parallel = data['predict_nba_parallel']
+# print(template.head())
+def match_columns(old_df, new_df):
+    # Get the columns that are missing in the new dataset
+    missing_columns = [col for col in old_df.columns if col not in new_df.columns]
+    
+    # Add missing columns with default value 0 to the new dataset
+    for col in missing_columns:
+        new_df[col] = 0
+    
+    # Reorder columns to match the order of the old dataset
+    all_columns = list(old_df.columns)
+    for col in new_df.columns:
+        if col not in all_columns:
+            all_columns.append(col)
+    
+    new_df = new_df[all_columns]  # Reorder columns
+    return new_df
 
-# Example: Use the loaded function
-# Assuming predict_nba_parallel requires inputs
-result = predict_nba_parallel(y_train)  # Modify based on your actual function arguments
+new_df = pd.read_csv('input.csv')
+input_df = match_columns(template, new_df)
+# pred = model.predict(input_df)[0]
 
-print(result)
+print(new_df.head())
+
+# print(pred)
+
+print('Done')
+
