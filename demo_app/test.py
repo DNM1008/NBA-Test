@@ -27,12 +27,31 @@ def match_columns(old_df, new_df):
     return new_df
 
 new_df = pd.read_csv('input.csv')
-input_df = match_columns(template, new_df)
-# pred = model.predict(input_df)[0]
+input_df = match_columns(new_df, template)
+input_df.drop(columns=['Unnamed: 0', 
+                     "CUS_GEN", 
+                     "BHSK_remain", 
+                     "BHNT_remain", 
+                     "TINHTRANGHONNHAN", 
+                     "Age_group", 
+                     "BHNT_after21", 
+                     "TONGTHUNHAPHANGTHANG", 
+                     "So_du", 
+                     "Khu_vuc", 
+                     "BHSK_after21", 
+                     "LOAIHINHCOQUANDANGCONGTAC", 
+                     "SONGUOIPHUTHUOC", 
+                     "TINHTRANGSOHUUNHA"])
+pred = model.predict(input_df)[0]
 
-print(new_df.head())
+print(len(new_df.columns))
+print(len(template.columns))
+# for col in template.columns:
+#     print(col)
+print(pred)
 
-# print(pred)
+a = np.setdiff1d(new_df.columns, template.columns)
+print (a)
 
 print('Done')
 
