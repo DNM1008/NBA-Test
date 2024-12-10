@@ -1,0 +1,32 @@
+ [
+    'Age_group'
+    'BHNT_after21', 
+    'BHNT_remain', 
+    'BHSK_after21', 
+    'BHSK_remain', 
+    'CUS_GEN', 
+    'Khu_vuc', 
+    'LOAIHINHCOQUANDANGCONGTAC', 
+    'So_du', 
+    'SONGUOIPHUTHUOC', 
+    'TINHTRANGHONNHAN', 
+    'TINHTRANGSOHUUNHA', 
+    'TONGTHUNHAPHANGTHANG', 
+
+ ] 
+
+  [
+    'Age_group'
+    'BHNT_after21', 
+    'BHNT_remain', 
+    'BHSK_after21', 
+    'BHSK_remain', 
+    'CUS_GEN', 
+    'Khu_vuc', 
+    'LOAIHINHCOQUANDANGCONGTAC', 
+    'So_du', 
+    'SONGUOIPHUTHUOC', 
+    'TINHTRANGHONNHAN', 
+    'TINHTRANGSOHUUNHA', 
+    'TONGTHUNHAPHANGTHANG', 
+  ] 

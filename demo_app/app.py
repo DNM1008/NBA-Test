@@ -23,32 +23,16 @@ annoy_index.load(index_file)
 # Load the cleaned dataframe
 train_df = pd.read_csv('cleaned_train.csv')
 y_train = train_df['IS_BANCAS']
-X_template = pd.read_csv('template.csv')
-template = X_template.drop(columns = ['Unnamed: 0', 'Unnamed: 1'])
+template = pd.read_csv('input.csv')
+
 
 # Load the transformer
 with open("transformer.pkl", "rb") as file:
     loaded_transformer = pickle.load(file)
 # Load the xgb model
-with open('xgb_model.pkl', 'rb') as file:
+with open('xgb_model_simplified.pkl', 'rb') as file:
     xgb_model = pickle.load(file)
-# Function to ensure new data has all columns from old data
-def match_columns(old_df, new_df):
-    # Get the columns that are missing in the new dataset
-    missing_columns = [col for col in old_df.columns if col not in new_df.columns]
-    
-    # Add missing columns with default value 0 to the new dataset
-    for col in missing_columns:
-        new_df[col] = 0
-    
-    # Reorder columns to match the order of the old dataset
-    all_columns = list(old_df.columns)
-    for col in new_df.columns:
-        if col not in all_columns:
-            all_columns.append(col)
-    
-    new_df = new_df[all_columns]  # Reorder columns
-    return new_df
+
 
 
 # Number of neighbors
@@ -171,19 +155,26 @@ with open("transformer.pkl", "rb") as file:
 if st.button("Predict BANCAS"):
     # Convert inputs to a DataFrame
     user_df = pd.DataFrame([user_inputs])
+    user_df_xgb = user_df.astype('category')
     user_df['IS_BANCAS'] = 0
-    user_df_xgb = match_columns(template, user_df)
+    user_df_xgb = user_df_xgb[sorted(user_df_xgb.columns)]    
+    
     user_df_xgb.to_csv('input.csv')
+    
+    
     target_column = 'IS_BANCAS'
     y_pred_col_train = predict_nba_parallel(user_df, target_column, annoy_index, transformer, y_train)
     y_pred_col_train_round = y_pred_col_train.round()
+    
+    
     # neighbor_indices = annoy_index.get_nns_by_vector(vector, num_neighbors)
     # similar_observations = train_df.iloc[neighbor_indices]
-    # y_pred_xgb = xgb_model.predict_proba(user_df_xgb)[0]
+    y_pred_xgb = xgb_model.predict_proba(user_df_xgb)
     
     st.write("Customer's expected BANCAS:")
     st.dataframe(y_pred_col_train)
-    # st.dataframe(y_pred_xgb)
+    st.dataframe(user_df_xgb)
+    # st.dataframe(template)
 
     # Save the DataFrame to a CSV file (optional)
     # user_df.to_csv("user_inputs.csv", index=False)
