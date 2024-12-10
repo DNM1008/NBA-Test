@@ -84,7 +84,7 @@ casa_options = {
         "15tr toi duoi 22tr", 
         "22tr toi duoi 35 tr", 
         "35tr toi duoi 50 tr", 
-        "50 tr toi duoi 100 tr"
+        "50 tr toi duoi 100 tr",
         "Tren 100tr",
         "None applicable", 
         ],
@@ -94,7 +94,7 @@ casa_options = {
         "43 toi duoi 80 trieu", 
         "80 toi 120 trieu", 
         "120 toi 200 trieu", 
-        "200 toi duoi 360 trieu"
+        "200 toi duoi 360 trieu",
         "360 toi 820 trieu", 
         "Tren 820 trieu", 
         "None applicable", 
@@ -157,8 +157,11 @@ if st.button("Predict BANCAS"):
     user_df = pd.DataFrame([user_inputs])
     user_df_xgb = user_df.astype('category')
     user_df['IS_BANCAS'] = 0
-    user_df_xgb = user_df_xgb[sorted(user_df_xgb.columns)]    
     
+    booster = xgb_model.get_booster()
+    feature_names = booster.feature_names
+    user_df_xgb = user_df_xgb[sorted(user_df_xgb.columns)]    
+    user_df_xgb = user_df_xgb[feature_names]
     user_df_xgb.to_csv('input.csv')
     
     
@@ -169,11 +172,17 @@ if st.button("Predict BANCAS"):
     
     # neighbor_indices = annoy_index.get_nns_by_vector(vector, num_neighbors)
     # similar_observations = train_df.iloc[neighbor_indices]
-    y_pred_xgb = xgb_model.predict_proba(user_df_xgb)
+    y_pred_xgb = xgb_model.predict_proba(user_df_xgb)[:,1]
     
-    st.write("Customer's expected BANCAS:")
-    st.dataframe(y_pred_col_train)
-    st.dataframe(user_df_xgb)
+    st.write("Customer's expected BANCAS (Annoy Index):")
+    st.write(y_pred_col_train)
+    # st.dataframe(user_df_xgb)
+    
+
+    st.write("Customer's expected BANCAS (XGBoost):")
+    st.write(y_pred_xgb)
+    st.write(user_df_xgb)
+    # st.dataframe(feature_names)
     # st.dataframe(template)
 
     # Save the DataFrame to a CSV file (optional)
